@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Rock · Paper · Scissors</title>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0b0c10;
+      --panel: #13151a;
+      --border: #1f2230;
+      --rock: #e05a5a;
+      --paper: #5ab0e0;
+      --scissors: #e0c05a;
+      --win: #5ae084;
+      --lose: #e05a5a;
+      --draw: #c0c0c0;
+      --text: #f0f0f0;
+      --muted: #606880;
+      --font-display: 'Bebas Neue', cursive;
+      --font-body: 'DM Sans', sans-serif;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-body);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px 16px;
+      overflow-x: hidden;
+    }
+
+    /* Background noise texture */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .wrapper { position: relative; z-index: 1; width: 100%; max-width: 560px; }
+
+    /* ── Header ── */
+    header { text-align: center; margin-bottom: 32px; }
+    header h1 {
+      font-family: var(--font-display);
+      font-size: clamp(2.8rem, 8vw, 4.5rem);
+      letter-spacing: 4px;
+      line-height: 1;
+      background: linear-gradient(135deg, var(--rock) 0%, var(--paper) 50%, var(--scissors) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    header p { color: var(--muted); font-size: .85rem; letter-spacing: 2px; text-transform: uppercase; margin-top: 6px; }
+
+    /* ── Scoreboard ── */
+    .scoreboard {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      margin-bottom: 32px;
+    }
+    .score-card {
+      flex: 1;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px 10px;
+      text-align: center;
+    }
+    .score-card .label { font-size: .7rem; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); }
+    .score-card .value {
+      font-family: var(--font-display);
+      font-size: 2.8rem;
+      line-height: 1.1;
+      transition: transform .25s;
+    }
+    .score-card.you .value  { color: var(--paper); }
+    .score-card.cpu .value  { color: var(--rock); }
+    .score-card.draw .value { color: var(--muted); }
+    .score-card .value.bump { animation: bump .3s ease; }
+    @keyframes bump { 0%{transform:scale(1)} 50%{transform:scale(1.35)} 100%{transform:scale(1)} }
+
+    /* ── Arena ── */
+    .arena {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      margin-bottom: 28px;
+      min-height: 140px;
+    }
+    .fighter {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+    .fighter .who { font-size: .72rem; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); }
+    .fighter .emoji {
+      font-size: clamp(3.5rem, 12vw, 5.5rem);
+      line-height: 1;
+      filter: drop-shadow(0 0 0px transparent);
+      transition: transform .2s;
+    }
+    .fighter.you .emoji  { transform-origin: right center; }
+    .fighter.cpu .emoji  { transform-origin: left center; }
+    .fighter.reveal      { animation: reveal .4s cubic-bezier(.34,1.56,.64,1) both; }
+    @keyframes reveal { from{opacity:0;transform:scale(.5) rotate(-15deg)} to{opacity:1;transform:scale(1) rotate(0)} }
+
+    .vs {
+      font-family: var(--font-display);
+      font-size: 1.6rem;
+      color: var(--border);
+      letter-spacing: 2px;
+      flex-shrink: 0;
+    }
+
+    /* ── Result banner ── */
+    .result-banner {
+      text-align: center;
+      margin-bottom: 24px;
+      min-height: 48px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+    }
+    .result-text {
+      font-family: var(--font-display);
+      font-size: clamp(1.6rem, 6vw, 2.4rem);
+      letter-spacing: 4px;
+      opacity: 0;
+      transform: translateY(10px);
+      transition: opacity .3s, transform .3s, color .3s;
+    }
+    .result-text.show { opacity: 1; transform: translateY(0); }
+    .result-text.WIN  { color: var(--win); text-shadow: 0 0 30px color-mix(in srgb, var(--win) 40%, transparent); }
+    .result-text.LOSE { color: var(--lose); }
+    .result-text.DRAW { color: var(--draw); }
+
+    .result-sub { font-size: .8rem; color: var(--muted); min-height: 18px; }
+
+    /* ── Choices ── */
+    .choices {
+      display: flex;
+      justify-content: center;
+      gap: 14px;
+      margin-bottom: 24px;
+    }
+    .choice-btn {
+      flex: 1;
+      max-width: 140px;
+      aspect-ratio: 1;
+      border: 2px solid var(--border);
+      border-radius: 16px;
+      background: var(--panel);
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: border-color .2s, transform .15s, box-shadow .2s;
+      position: relative;
+      overflow: hidden;
+    }
+    .choice-btn::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      opacity: 0;
+      transition: opacity .2s;
+    }
+    .choice-btn[data-choice="rock"]     { --accent: var(--rock); }
+    .choice-btn[data-choice="paper"]    { --accent: var(--paper); }
+    .choice-btn[data-choice="scissors"] { --accent: var(--scissors); }
+    .choice-btn::after { background: radial-gradient(circle at center, color-mix(in srgb, var(--accent) 20%, transparent), transparent 70%); }
+    .choice-btn:hover { border-color: var(--accent); transform: translateY(-4px); box-shadow: 0 8px 24px color-mix(in srgb, var(--accent) 20%, transparent); }
+    .choice-btn:hover::after { opacity: 1; }
+    .choice-btn:active { transform: scale(.94); }
+    .choice-btn .icon { font-size: 2.4rem; line-height: 1; }
+    .choice-btn .name { font-size: .7rem; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); }
+    .choice-btn:disabled { opacity: .45; cursor: not-allowed; transform: none; box-shadow: none; }
+
+    /* ── Reset ── */
+    .reset-btn {
+      display: block;
+      margin: 0 auto;
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      font-family: var(--font-body);
+      font-size: .75rem;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      padding: 9px 22px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: border-color .2s, color .2s;
+    }
+    .reset-btn:hover { border-color: var(--draw); color: var(--text); }
+
+    /* ── Confetti burst ── */
+    .confetti-wrap {
+      position: fixed; inset: 0; pointer-events: none; z-index: 99;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .dot {
+      position: absolute;
+      width: 8px; height: 8px;
+      border-radius: 2px;
+      animation: fly 0.8s ease-out forwards;
+    }
+    @keyframes fly {
+      0%   { transform: translate(0,0) rotate(0deg) scale(1); opacity: 1; }
+      100% { transform: translate(var(--tx), var(--ty)) rotate(var(--rot)) scale(.4); opacity: 0; }
+    }
+  </style>
+</head>
+<body>
+<div class="wrapper">
+
+  <header>
+    <h1>Rock Paper Scissors</h1>
+    <p>Best of legends · Pick your weapon</p>
+  </header>
+
+  <div class="scoreboard">
+    <div class="score-card you">
+      <div class="label">You</div>
+      <div class="value" id="score-you">0</div>
+    </div>
+    <div class="score-card draw">
+      <div class="label">Draw</div>
+      <div class="value" id="score-draw">0</div>
+    </div>
+    <div class="score-card cpu">
+      <div class="label">CPU</div>
+      <div class="value" id="score-cpu">0</div>
+    </div>
+  </div>
+
+  <div class="arena">
+    <div class="fighter you">
+      <div class="who">You</div>
+      <div class="emoji" id="you-emoji">❓</div>
+    </div>
+    <div class="vs">VS</div>
+    <div class="fighter cpu">
+      <div class="who">CPU</div>
+      <div class="emoji" id="cpu-emoji">❓</div>
+    </div>
+  </div>
+
+  <div class="result-banner">
+    <div class="result-text" id="result-text">Choose your move!</div>
+    <div class="result-sub" id="result-sub"></div>
+  </div>
+
+  <div class="choices">
+    <button class="choice-btn" data-choice="rock"     onclick="play('rock')">
+      <span class="icon">🪨</span><span class="name">Rock</span>
+    </button>
+    <button class="choice-btn" data-choice="paper"    onclick="play('paper')">
+      <span class="icon">📄</span><span class="name">Paper</span>
+    </button>
+    <button class="choice-btn" data-choice="scissors" onclick="play('scissors')">
+      <span class="icon">✂️</span><span class="name">Scissors</span>
+    </button>
+  </div>
+
+  <button class="reset-btn" onclick="resetGame()">Reset Scores</button>
+</div>
+
+<div class="confetti-wrap" id="confetti-wrap"></div>
+
+<script>
+  const CHOICES = ['rock','paper','scissors'];
+  const EMOJI   = { rock:'🪨', paper:'📄', scissors:'✂️' };
+  const BEATS   = { rock:'scissors', paper:'rock', scissors:'paper' };
+  const PHRASES = {
+    WIN:  ['Flawless!','You crushed it!','Too easy!','Unstoppable!'],
+    LOSE: ['CPU wins!','Better luck next time!','Got you!','So close...'],
+    DRAW: ['Great minds!','Same brain!','A perfect tie!','Deadlock!'],
+  };
+
+  let scores = { you: 0, cpu: 0, draw: 0 };
+  let locked = false;
+
+  function play(choice) {
+    if (locked) return;
+    locked = true;
+
+    const buttons = document.querySelectorAll('.choice-btn');
+    buttons.forEach(b => b.disabled = true);
+
+    const youEmoji = document.getElementById('you-emoji');
+    const cpuEmoji = document.getElementById('cpu-emoji');
+    const resultText = document.getElementById('result-text');
+    const resultSub  = document.getElementById('result-sub');
+
+    // Show spinning dots while "thinking"
+    youEmoji.textContent = EMOJI[choice];
+    youEmoji.parentElement.classList.add('reveal');
+    cpuEmoji.textContent = '🤔';
+
+    resultText.className = 'result-text';
+    resultSub.textContent = 'CPU is thinking…';
+
+    setTimeout(() => {
+      const cpu = CHOICES[Math.floor(Math.random() * 3)];
+      cpuEmoji.textContent = EMOJI[cpu];
+      cpuEmoji.parentElement.classList.add('reveal');
+
+      let outcome;
+      if (choice === cpu)              outcome = 'DRAW';
+      else if (BEATS[choice] === cpu)  outcome = 'WIN';
+      else                             outcome = 'LOSE';
+
+      scores[outcome === 'WIN' ? 'you' : outcome === 'LOSE' ? 'cpu' : 'draw']++;
+      updateScore();
+
+      const phrase = PHRASES[outcome][Math.floor(Math.random() * PHRASES[outcome].length)];
+      resultText.textContent = outcome;
+      resultText.className = `result-text show ${outcome}`;
+      resultSub.textContent = phrase;
+
+      if (outcome === 'WIN') spawnConfetti();
+
+      setTimeout(() => {
+        buttons.forEach(b => b.disabled = false);
+        locked = false;
+        youEmoji.parentElement.classList.remove('reveal');
+        cpuEmoji.parentElement.classList.remove('reveal');
+      }, 800);
+    }, 600);
+  }
+
+  function updateScore() {
+    ['you','cpu','draw'].forEach(k => {
+      const el = document.getElementById(`score-${k}`);
+      el.textContent = scores[k];
+      el.classList.remove('bump');
+      void el.offsetWidth; // reflow
+      el.classList.add('bump');
+    });
+  }
+
+  function resetGame() {
+    scores = { you: 0, cpu: 0, draw: 0 };
+    ['you','cpu','draw'].forEach(k => document.getElementById(`score-${k}`).textContent = '0');
+    document.getElementById('you-emoji').textContent = '❓';
+    document.getElementById('cpu-emoji').textContent = '❓';
+    const rt = document.getElementById('result-text');
+    rt.className = 'result-text';
+    rt.textContent = 'Choose your move!';
+    document.getElementById('result-sub').textContent = '';
+  }
+
+  function spawnConfetti() {
+    const wrap = document.getElementById('confetti-wrap');
+    const colors = ['#e05a5a','#5ab0e0','#e0c05a','#5ae084','#c05ae0','#ffffff'];
+    for (let i = 0; i < 36; i++) {
+      const dot = document.createElement('div');
+      dot.className = 'dot';
+      const angle = (i / 36) * 360 * (Math.PI / 180);
+      const dist  = 80 + Math.random() * 160;
+      dot.style.setProperty('--tx', `${Math.cos(angle) * dist}px`);
+      dot.style.setProperty('--ty', `${Math.sin(angle) * dist}px`);
+      dot.style.setProperty('--rot', `${Math.random() * 720 - 360}deg`);
+      dot.style.background = colors[Math.floor(Math.random() * colors.length)];
+      dot.style.animationDelay = `${Math.random() * 0.15}s`;
+      wrap.appendChild(dot);
+    }
+    setTimeout(() => wrap.innerHTML = '', 1200);
+  }
+</script>
+</body>
+</html>
